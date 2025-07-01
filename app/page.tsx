@@ -10,6 +10,7 @@ import { FileUpload } from '@/components/file-upload';
 import { TranslationTable } from '@/components/translation-table';
 import { Download, Languages, FileText, Sparkles, ArrowLeft, Maximize2, Minimize2 } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
+import { ConfirmationDialog } from '@/components/confirmation-dialog';
 
 interface TranslationFile {
   name: string;
@@ -34,6 +35,10 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewState, setViewState] = useState<ViewState>('upload');
   const [isFullWidth, setIsFullWidth] = useState(false);
+  
+  // Confirmation dialog state
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
 
   const flattenObject = (obj: Record<string, any>, prefix = ''): Record<string, string> => {
     const flattened: Record<string, string> = {};
@@ -119,6 +124,18 @@ export default function Home() {
           : translation
       )
     );
+  };
+  
+  const deleteTranslation = (key: string) => {
+    setKeyToDelete(key);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const confirmDelete = () => {
+    if (keyToDelete) {
+      setTranslations(prev => prev.filter(translation => translation.key !== keyToDelete));
+      setKeyToDelete(null);
+    }
   };
 
   const downloadFile = async (language: string) => {
@@ -396,6 +413,7 @@ export default function Home() {
             translations={translations}
             languages={getAllLanguages()}
             onUpdateTranslation={updateTranslation}
+            onDeleteTranslation={deleteTranslation}
           />
         </div>
       </div>
@@ -407,6 +425,18 @@ export default function Home() {
       <div className={`container mx-auto px-4 py-8 ${viewState === 'upload' || !isFullWidth ? 'max-w-7xl' : 'max-w-none'}`}>
         {viewState === 'upload' ? renderUploadView() : renderResultsView()}
       </div>
+      
+      {/* Confirmation Dialog for Deleting Translation */}
+      <ConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Translation"
+        description={`Are you sure you want to delete the translation key "${keyToDelete}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

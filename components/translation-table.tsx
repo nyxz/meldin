@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ChevronDown, ChevronRight, AlertCircle, Check } from 'lucide-react';
+import { ChevronDown, ChevronRight, AlertCircle, Check, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FlattenedTranslation {
@@ -19,12 +19,14 @@ interface TranslationTableProps {
   translations: FlattenedTranslation[];
   languages: string[];
   onUpdateTranslation: (key: string, language: string, value: string) => void;
+  onDeleteTranslation?: (key: string) => void;
 }
 
 export function TranslationTable({ 
   translations, 
   languages, 
-  onUpdateTranslation 
+  onUpdateTranslation,
+  onDeleteTranslation
 }: TranslationTableProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -145,6 +147,11 @@ export function TranslationTable({
                             </div>
                           </th>
                         ))}
+                        {onDeleteTranslation && (
+                          <th className="text-center p-4 font-semibold text-gray-300 w-[80px]">
+                            Actions
+                          </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -209,6 +216,19 @@ export function TranslationTable({
                               </td>
                             );
                           })}
+                          {onDeleteTranslation && (
+                            <td className="p-2 text-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onDeleteTranslation(translation.key)}
+                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
+                                title="Delete this translation key"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
