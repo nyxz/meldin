@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { FileUpload } from '@/components/file-upload';
 import { TranslationTable } from '@/components/translation-table';
-import { Download, Languages, FileText, Sparkles, ArrowLeft } from 'lucide-react';
+import { Download, Languages, FileText, Sparkles, ArrowLeft, Maximize2, Minimize2 } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
 
 interface TranslationFile {
@@ -33,6 +33,7 @@ export default function Home() {
   const [translations, setTranslations] = useState<FlattenedTranslation[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewState, setViewState] = useState<ViewState>('upload');
+  const [isFullWidth, setIsFullWidth] = useState(false);
 
   const flattenObject = (obj: Record<string, any>, prefix = ''): Record<string, string> => {
     const flattened: Record<string, string> = {};
@@ -166,6 +167,10 @@ export default function Home() {
 
   const goBackToUpload = () => {
     setViewState('upload');
+  };
+  
+  const toggleFullWidth = () => {
+    setIsFullWidth(prev => !prev);
   };
 
   // Render the header section
@@ -318,65 +323,88 @@ export default function Home() {
   // Render the results view
   const renderResultsView = () => (
     <>
-      <div className="mb-8">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={goBackToUpload}
-          className="border-gray-700 hover:border-gray-600 mb-6"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Upload
-        </Button>
-        
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-cyan-300">Translation Results</h2>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="bg-gray-800 text-gray-300">
-              {translations.length} keys
-            </Badge>
-            <Badge variant="secondary" className="bg-gray-800 text-gray-300">
-              {getAllLanguages().length} languages
-            </Badge>
-            {getMissingCount() > 0 && (
-              <Badge variant="destructive" className="bg-red-500/20 text-red-300 border-red-500/30">
-                {getMissingCount()} missing
-              </Badge>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        {/* Download Buttons */}
-        <div className="flex flex-wrap gap-3 mb-6">
-          {getAllLanguages().map(language => (
-            <Button
-              key={language}
-              onClick={() => downloadFile(language)}
-              variant="outline"
-              size="sm"
+      <div className={`transition-all duration-300 ${isFullWidth ? 'max-w-none' : 'max-w-7xl mx-auto'}`}>
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={goBackToUpload}
               className="border-gray-700 hover:border-gray-600"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Download {language}.json
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Upload
             </Button>
-          ))}
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleFullWidth}
+              className="border-gray-700 hover:border-gray-600"
+            >
+              {isFullWidth ? (
+                <>
+                  <Minimize2 className="w-4 h-4 mr-2" />
+                  Collapse View
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-4 h-4 mr-2" />
+                  Expand View
+                </>
+              )}
+            </Button>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-cyan-300">Translation Results</h2>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="bg-gray-800 text-gray-300">
+                {translations.length} keys
+              </Badge>
+              <Badge variant="secondary" className="bg-gray-800 text-gray-300">
+                {getAllLanguages().length} languages
+              </Badge>
+              {getMissingCount() > 0 && (
+                <Badge variant="destructive" className="bg-red-500/20 text-red-300 border-red-500/30">
+                  {getMissingCount()} missing
+                </Badge>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Translation Table */}
-        <TranslationTable
-          translations={translations}
-          languages={getAllLanguages()}
-          onUpdateTranslation={updateTranslation}
-        />
+        <div className="space-y-6">
+          {/* Download Buttons */}
+          <div className="flex flex-wrap gap-3 mb-6">
+            {getAllLanguages().map(language => (
+              <Button
+                key={language}
+                onClick={() => downloadFile(language)}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 hover:border-gray-600"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download {language}.json
+              </Button>
+            ))}
+          </div>
+
+          {/* Translation Table */}
+          <TranslationTable
+            translations={translations}
+            languages={getAllLanguages()}
+            onUpdateTranslation={updateTranslation}
+          />
+        </div>
       </div>
     </>
   );
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className={`container mx-auto px-4 py-8 ${viewState === 'upload' || !isFullWidth ? 'max-w-7xl' : 'max-w-none'}`}>
         {viewState === 'upload' ? renderUploadView() : renderResultsView()}
       </div>
     </div>
