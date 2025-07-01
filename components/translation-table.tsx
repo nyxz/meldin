@@ -6,8 +6,9 @@ import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {Badge} from '@/components/ui/badge';
 import {Checkbox} from '@/components/ui/checkbox';
-import {AlertCircle, Check, ChevronDown, ChevronRight, MinusCircle, Trash2} from 'lucide-react';
+import {AlertCircle, Check, ChevronDown, ChevronRight, MinusCircle, Sparkles, Trash2} from 'lucide-react';
 import {cn} from '@/lib/utils';
+import {AITranslationDialog} from '@/components/ai-translation-dialog';
 
 interface FlattenedTranslation {
     key: string;
@@ -36,6 +37,15 @@ export function TranslationTable({
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [editingCell, setEditingCell] = useState<string | null>(null);
     const [localSelectedKeys, setLocalSelectedKeys] = useState<Set<string>>(selectedKeys);
+
+    // AI Translation state
+    const [isTranslationDialogOpen, setIsTranslationDialogOpen] = useState(false);
+    const [translationDialogData, setTranslationDialogData] = useState<{
+        key: string;
+        sourceLanguage: string;
+        targetLanguage: string;
+        sourceText: string;
+    } | null>(null);
 
     // Sync with parent component's selection state
     useEffect(() => {
@@ -78,6 +88,29 @@ export function TranslationTable({
     const handleCellEdit = (key: string, language: string, value: string) => {
         onUpdateTranslation(key, language, value);
         setEditingCell(null);
+    };
+
+    // AI Translation handling
+    const openTranslationDialog = (key: string, targetLanguage: string) => {
+        const translation = translations.find(t => t.key === key);
+        if (!translation) return;
+
+        // Find the source language (first non-empty value, preferably the first language)
+        const sourceLanguage = languages.find(lang => translation.values[lang]) || languages[0];
+        const sourceText = translation.values[sourceLanguage] || '';
+
+        if (!sourceText) {
+            alert('No source text available for translation');
+            return;
+        }
+
+        setTranslationDialogData({
+            key,
+            sourceLanguage,
+            targetLanguage,
+            sourceText
+        });
+        setIsTranslationDialogOpen(true);
     };
 
     // Selection handling
@@ -164,6 +197,19 @@ export function TranslationTable({
 
     return (
         <div className="space-y-4">
+            {/* AI Translation Dialog */}
+            {translationDialogData && (
+                <AITranslationDialog
+                    isOpen={isTranslationDialogOpen}
+                    onClose={() => setIsTranslationDialogOpen(false)}
+                    onTranslate={onUpdateTranslation}
+                    sourceText={translationDialogData.sourceText}
+                    sourceLanguage={translationDialogData.sourceLanguage}
+                    targetLanguage={translationDialogData.targetLanguage}
+                    translationKey={translationDialogData.key}
+                />
+            )}
+
             {Object.entries(groupedTranslations).map(([section, sectionTranslations]) => {
                 const isExpanded = expandedSections.has(section);
                 const stats = getSectionStats(sectionTranslations);
@@ -344,15 +390,33 @@ export function TranslationTable({
                                                                 >
                                                                     {isEmpty ? (
                                                                         <div
-                                                                            className="flex items-center gap-2 text-red-300">
-                                                                            <AlertCircle className="w-4 h-4"/>
-                                                                            <span className="text-sm italic">Missing translation</span>
+                                                                            className="flex items-center justify-between gap-2">
+                                                                            <div
+                                                                                className="flex items-center gap-2 text-red-300">
+                                                                                <AlertCircle className="w-4 h-4"/>
+                                                                                <span className="text-sm italic">Missing translation</span>
+                                                                            </div>
+                                                                            {language !== languages[0] && (
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        openTranslationDialog(translation.key, language);
+                                                                                    }}
+                                                                                    className="h-6 px-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                                                                                    title="Translate with AI"
+                                                                                >
+                                                                                    <Sparkles className="w-3 h-3 mr-1"/>
+                                                                                    AI
+                                                                                </Button>
+                                                                            )}
                                                                         </div>
                                                                     ) : (
                                                                         <span
                                                                             className="text-gray-200 text-sm leading-5">
-                                        {value}
-                                      </span>
+                                                                            {value}
+                                                                        </span>
                                                                     )}
                                                                 </div>
                                                             )}

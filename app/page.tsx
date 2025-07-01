@@ -481,6 +481,15 @@ export default function Home() {
                                     <Trash2 className="w-4 h-4 mr-2"/>
                                     Delete Selected
                                 </Button>
+                                {/* We'll implement bulk AI translation in a future update */}
+                                {/* <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30"
+                                >
+                                    <Sparkles className="w-4 h-4 mr-2"/>
+                                    AI Translate Selected
+                                </Button> */}
                             </div>
                         </div>
                     </div>
