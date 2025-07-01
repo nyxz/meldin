@@ -1,3 +1,5 @@
+import { getSession } from 'next-auth/react';
+
 /**
  * Translates text using the AI translation API
  * @param text The text to translate
@@ -11,6 +13,9 @@ export async function translateText(
     targetLanguage: string
 ): Promise<string> {
     try {
+        // Get the session to include the authentication token
+        const session = await getSession();
+        
         const response = await fetch('/api/translate', {
             method: 'POST',
             headers: {

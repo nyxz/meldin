@@ -6,9 +6,10 @@ import {Button} from '@/components/ui/button';
 import {Badge} from '@/components/ui/badge';
 import {FileUpload} from '@/components/file-upload';
 import {TranslationTable} from '@/components/translation-table';
-import {ArrowLeft, Download, FileText, Languages, Maximize2, Minimize2, Sparkles, Trash2} from 'lucide-react';
+import {ArrowLeft, Download, FileText, Languages, Maximize2, Minimize2, Sparkles, Trash2, LogOut} from 'lucide-react';
 import {Loader} from '@/components/ui/loader';
 import {ConfirmationDialog} from '@/components/confirmation-dialog';
+import {signOut, useSession} from 'next-auth/react';
 
 interface TranslationFile {
     name: string;
@@ -33,7 +34,7 @@ export default function Home() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [viewState, setViewState] = useState<ViewState>('upload');
     const [isFullWidth, setIsFullWidth] = useState(false);
-
+    const { data: session } = useSession();
     // Selection state
     const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
@@ -208,23 +209,44 @@ export default function Home() {
     };
 
     // Render the header section
-    const renderHeader = () => (
-        <div className="text-center mb-12">
-            <div className="flex items-center justify-center gap-3 mb-4">
-                <div
-                    className="p-3 rounded-xl bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30">
-                    <Languages className="w-8 h-8 text-cyan-400"/>
+    const renderHeader = () => {
+        
+        return (
+            <div className="mb-12">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                        <div
+                            className="p-3 rounded-xl bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30">
+                            <Languages className="w-8 h-8 text-cyan-400"/>
+                        </div>
+                        <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                            Translation Manager
+                        </h1>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        {session?.user?.name && (
+                            <span className="text-gray-400">
+                                Logged in as <span className="text-cyan-400">{session.user.name}</span>
+                            </span>
+                        )}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => signOut({ callbackUrl: '/login' })}
+                            className="border-gray-700 hover:border-gray-600"
+                        >
+                            <LogOut className="w-4 h-4 mr-2"/>
+                            Logout
+                        </Button>
+                    </div>
                 </div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-                    Translation Manager
-                </h1>
+                <p className="text-gray-400 text-lg max-w-2xl mx-auto text-center">
+                    Manage your next-intl translations with ease. Upload your source file and target translations to
+                    compare, edit, and export your localization files.
+                </p>
             </div>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                Manage your next-intl translations with ease. Upload your source file and target translations to
-                compare, edit, and export your localization files.
-            </p>
-        </div>
-    );
+        );
+    };
 
     // Render the upload view
     const renderUploadView = () => (
@@ -365,15 +387,27 @@ export default function Home() {
             <div className={`transition-all duration-300 ${isFullWidth ? 'max-w-none' : 'max-w-7xl mx-auto'}`}>
                 <div className="mb-8">
                     <div className="flex items-center justify-between mb-6">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={goBackToUpload}
-                            className="border-gray-700 hover:border-gray-600"
-                        >
-                            <ArrowLeft className="w-4 h-4 mr-2"/>
-                            Back to Upload
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={goBackToUpload}
+                                className="border-gray-700 hover:border-gray-600"
+                            >
+                                <ArrowLeft className="w-4 h-4 mr-2"/>
+                                Back to Upload
+                            </Button>
+                            
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => signOut({ callbackUrl: '/login' })}
+                                className="border-gray-700 hover:border-gray-600"
+                            >
+                                <LogOut className="w-4 h-4 mr-2"/>
+                                Logout
+                            </Button>
+                        </div>
 
                         <Button
                             variant="outline"

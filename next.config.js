@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // Remove 'output: export' to enable NextAuth middleware
+  // output: 'export',
   eslint: {
     ignoreDuringBuilds: true,
   },
