@@ -45,6 +45,8 @@ export function TranslationTable({
         sourceLanguage: string;
         targetLanguage: string;
         sourceText: string;
+        isBatch?: boolean;
+        batchItems?: Array<{key: string, text: string}>;
     } | null>(null);
 
     // Sync with parent component's selection state
@@ -108,7 +110,48 @@ export function TranslationTable({
             key,
             sourceLanguage,
             targetLanguage,
-            sourceText
+            sourceText,
+            isBatch: false
+        });
+        setIsTranslationDialogOpen(true);
+    };
+    
+    // Batch AI Translation handling
+    const openBatchTranslationDialog = (targetLanguage: string) => {
+        if (localSelectedKeys.size === 0) {
+            alert('Please select at least one translation to translate');
+            return;
+        }
+        
+        // Get the source language (first language in the list)
+        const sourceLanguage = languages[0];
+        
+        // Collect all selected translations
+        const selectedTranslations = translations.filter(t => 
+            localSelectedKeys.has(t.key) && t.values[sourceLanguage]
+        );
+        
+        if (selectedTranslations.length === 0) {
+            alert('No source texts available for translation');
+            return;
+        }
+        
+        // Create batch items
+        const batchItems = selectedTranslations.map(t => ({
+            key: t.key,
+            text: t.values[sourceLanguage] || ''
+        }));
+        
+        // Use the first item's text as the sample text
+        const sampleText = batchItems[0].text;
+        
+        setTranslationDialogData({
+            key: 'batch', // Special key for batch translations
+            sourceLanguage,
+            targetLanguage,
+            sourceText: sampleText,
+            isBatch: true,
+            batchItems
         });
         setIsTranslationDialogOpen(true);
     };
@@ -301,13 +344,29 @@ export function TranslationTable({
                                             <th className="text-left p-4 font-semibold text-gray-300 min-w-[300px]">
                                                 Translation Key
                                             </th>
-                                            {languages.map(language => (
+                                            {languages.map((language, index) => (
                                                 <th key={language}
                                                     className="text-left p-4 font-semibold text-gray-300 min-w-[200px]">
-                                                    <div className="flex items-center gap-2">
-                              <span className="uppercase text-xs px-2 py-1 bg-gray-700 rounded">
-                                {language}
-                              </span>
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="uppercase text-xs px-2 py-1 bg-gray-700 rounded">
+                                                                {language}
+                                                            </span>
+                                                        </div>
+                                                        
+                                                        {/* Only show batch translate button for non-source languages */}
+                                                        {index > 0 && localSelectedKeys.size > 0 && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-7 px-2 text-xs hover:bg-purple-500/20 hover:text-purple-300"
+                                                                onClick={() => openBatchTranslationDialog(language)}
+                                                                title={`Translate selected items to ${language}`}
+                                                            >
+                                                                <Sparkles className="w-3 h-3 mr-1" />
+                                                                Batch AI
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </th>
                                             ))}

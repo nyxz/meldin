@@ -6,9 +6,30 @@ import {Button} from '@/components/ui/button';
 import {Badge} from '@/components/ui/badge';
 import {FileUpload} from '@/components/file-upload';
 import {TranslationTable} from '@/components/translation-table';
-import {ArrowLeft, Download, FileText, Languages, LogOut, Maximize2, Minimize2, Sparkles, Trash2} from 'lucide-react';
+import {
+    ArrowLeft,
+    Download,
+    FileText,
+    Languages,
+    Loader as LoaderIcon,
+    LogOut,
+    Maximize2,
+    Minimize2,
+    Sparkles,
+    Trash2
+} from 'lucide-react';
 import {Loader} from '@/components/ui/loader';
 import {ConfirmationDialog} from '@/components/confirmation-dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from '@/components/ui/select';
+import {BatchTranslationItem, getLanguageName, translateBatch} from '@/lib/ai-translation';
 import {signOut, useSession} from 'next-auth/react';
 
 interface TranslationFile {
@@ -60,6 +81,11 @@ export default function Home() {
     const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
     const [isBulkDelete, setIsBulkDelete] = useState(false);
 
+    // Batch translation state
+    const [showBatchTranslateDialog, setShowBatchTranslateDialog] = useState(false);
+    const [batchTargetLanguage, setBatchTargetLanguage] = useState<string>('');
+    const [isBatchTranslating, setIsBatchTranslating] = useState(false);
+
 
     const processTranslations = useCallback(() => {
         if (!sourceFile) return;
@@ -68,7 +94,13 @@ export default function Home() {
 
         // Use setTimeout to allow the UI to update and show the loader
         setTimeout(() => {
+            // Flatten all files once upfront for better performance
             const sourceFlat = flattenObject(sourceFile.content);
+            const targetFlats = targetFiles.reduce((acc, file) => {
+                acc[file.language] = flattenObject(file.content);
+                return acc;
+            }, {} as Record<string, Record<string, string>>);
+
             const allKeys = Object.keys(sourceFlat);
 
             const processed: FlattenedTranslation[] = allKeys.map(key => {
@@ -76,9 +108,9 @@ export default function Home() {
                     [sourceFile.language]: sourceFlat[key]
                 };
 
+                // Use the pre-flattened objects for better performance
                 targetFiles.forEach(file => {
-                    const targetFlat = flattenObject(file.content);
-                    values[file.language] = targetFlat[key] || '';
+                    values[file.language] = targetFlats[file.language][key] || '';
                 });
 
                 const parts = key.split('.');
@@ -500,12 +532,136 @@ export default function Home() {
         </>
     );
 
+    // Handle batch translation
+    const handleBatchTranslate = async () => {
+        if (selectedKeys.size === 0 || !batchTargetLanguage || isBatchTranslating) {
+            return;
+        }
+
+        setIsBatchTranslating(true);
+
+        // Get the source language (first language in the list)
+        const sourceLanguage = getAllLanguages()[0];
+
+        // Create batch items from selected keys
+        const batchItems: BatchTranslationItem[] = Array.from(selectedKeys)
+            .map(key => {
+                const translation = translations.find(t => t.key === key);
+                if (!translation) return null;
+
+                return {
+                    key,
+                    text: translation.values[sourceLanguage] || ''
+                };
+            })
+            .filter((item): item is BatchTranslationItem =>
+                item !== null && item.text.trim() !== ''
+            );
+
+        if (batchItems.length === 0) {
+            alert('No valid texts found for translation');
+            setIsBatchTranslating(false);
+            return;
+        }
+
+        try {
+            // Call the batch translation API
+            const results = await translateBatch(
+                batchItems,
+                getLanguageName(sourceLanguage),
+                getLanguageName(batchTargetLanguage)
+            );
+
+            // Update translations with results
+            results.forEach(result => {
+                updateTranslation(result.key, batchTargetLanguage, result.translatedText);
+            });
+
+            // Close the dialog
+            setShowBatchTranslateDialog(false);
+            setBatchTargetLanguage('');
+
+        } catch (error) {
+            console.error('Batch translation error:', error);
+            alert('Failed to translate batch. Please try again.');
+        } finally {
+            setIsBatchTranslating(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-950 text-gray-100">
             <div
                 className={`container mx-auto px-4 py-8 ${viewState === 'upload' || !isFullWidth ? 'max-w-7xl' : 'max-w-none'}`}>
                 {viewState === 'upload' ? renderUploadView() : renderResultsView()}
             </div>
+
+            {/* Batch Translation Dialog */}
+            <Dialog open={showBatchTranslateDialog} onOpenChange={setShowBatchTranslateDialog}>
+                <DialogContent className="bg-gray-900 border-gray-800 text-gray-100">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                            <Sparkles className="h-5 w-5 text-purple-400"/>
+                            <span>Batch AI Translation</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-gray-400">
+                            Translate {selectedKeys.size} selected items using AI
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 my-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-300">Source Language:</label>
+                            <div className="p-3 bg-gray-800 rounded-md text-gray-200 border border-gray-700">
+                                {getAllLanguages()[0]}
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-300">Target Language:</label>
+                            <Select value={batchTargetLanguage} onValueChange={setBatchTargetLanguage}>
+                                <SelectTrigger className="bg-gray-800 border-gray-700 text-gray-200">
+                                    <SelectValue placeholder="Select target language"/>
+                                </SelectTrigger>
+                                <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
+                                    {getAllLanguages().slice(1).map(lang => (
+                                        <SelectItem key={lang} value={lang}>
+                                            {lang}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowBatchTranslateDialog(false)}
+                            className="border-gray-700 hover:bg-gray-800 hover:text-gray-100"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleBatchTranslate}
+                            disabled={!batchTargetLanguage || isBatchTranslating}
+                            className="bg-gradient-to-r from-purple-500 to-cyan-500 hover:from-purple-600 hover:to-cyan-600 text-white"
+                        >
+                            {isBatchTranslating ? (
+                                <>
+                                    <LoaderIcon className="w-4 h-4 mr-2 animate-spin"/>
+                                    Translating...
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles className="w-4 h-4 mr-2"/>
+                                    Translate {selectedKeys.size} Items
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Bottom Toolbar for Bulk Actions */}
             {selectedKeys.size > 0 && (
@@ -537,15 +693,15 @@ export default function Home() {
                                     <Trash2 className="w-4 h-4 mr-2"/>
                                     Delete Selected
                                 </Button>
-                                {/* We'll implement bulk AI translation in a future update */}
-                                {/* <Button
+                                <Button
                                     variant="outline"
                                     size="sm"
                                     className="bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30"
+                                    onClick={() => setShowBatchTranslateDialog(true)}
                                 >
                                     <Sparkles className="w-4 h-4 mr-2"/>
                                     AI Translate Selected
-                                </Button> */}
+                                </Button>
                             </div>
                         </div>
                     </div>
