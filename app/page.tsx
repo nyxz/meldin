@@ -9,6 +9,8 @@ import {TranslationTable} from '@/components/translation-table';
 import {
     ArrowLeft,
     Download,
+    Eye,
+    EyeOff,
     FileText,
     Languages,
     Loader as LoaderIcon,
@@ -31,6 +33,7 @@ import {
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from '@/components/ui/select';
 import {BatchTranslationItem, getLanguageName, translateBatch} from '@/lib/ai-translation';
 import {signOut, useSession} from 'next-auth/react';
+import {cn} from '@/lib/utils';
 
 interface TranslationFile {
     name: string;
@@ -85,6 +88,9 @@ export default function Home() {
     const [showBatchTranslateDialog, setShowBatchTranslateDialog] = useState(false);
     const [batchTargetLanguage, setBatchTargetLanguage] = useState<string>('');
     const [isBatchTranslating, setIsBatchTranslating] = useState(false);
+    
+    // View options
+    const [hideCompleted, setHideCompleted] = useState(false);
 
 
     const processTranslations = useCallback(() => {
@@ -503,19 +509,43 @@ export default function Home() {
 
                 <div className="space-y-6">
                     {/* Download Buttons */}
-                    <div className="flex flex-wrap gap-3 mb-6">
-                        {getAllLanguages().map(language => (
-                            <Button
-                                key={language}
-                                onClick={() => downloadFile(language)}
-                                variant="outline"
-                                size="sm"
-                                className="border-gray-700 hover:border-gray-600"
-                            >
-                                <Download className="w-4 h-4 mr-2"/>
-                                Download {language}.json
-                            </Button>
-                        ))}
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex flex-wrap gap-3">
+                            {getAllLanguages().map(language => (
+                                <Button
+                                    key={language}
+                                    onClick={() => downloadFile(language)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-gray-700 hover:border-gray-600"
+                                >
+                                    <Download className="w-4 h-4 mr-2"/>
+                                    Download {language}.json
+                                </Button>
+                            ))}
+                        </div>
+                        
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setHideCompleted(!hideCompleted)}
+                            className={cn(
+                                "border-gray-700 hover:border-gray-600",
+                                hideCompleted && "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
+                            )}
+                        >
+                            {hideCompleted ? (
+                                <>
+                                    <Eye className="w-4 h-4 mr-2"/>
+                                    Show Completed
+                                </>
+                            ) : (
+                                <>
+                                    <EyeOff className="w-4 h-4 mr-2"/>
+                                    Hide Completed
+                                </>
+                            )}
+                        </Button>
                     </div>
 
                     {/* Translation Table */}
@@ -526,6 +556,7 @@ export default function Home() {
                         onDeleteTranslation={deleteTranslation}
                         selectedKeys={selectedKeys}
                         onSelectionChange={handleSelectionChange}
+                        hideCompleted={hideCompleted}
                     />
                 </div>
             </div>

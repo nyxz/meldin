@@ -24,6 +24,7 @@ interface TranslationTableProps {
     onDeleteTranslation?: (key: string) => void;
     selectedKeys?: Set<string>;
     onSelectionChange?: (keys: Set<string>) => void;
+    hideCompleted?: boolean;
 }
 
 export function TranslationTable({
@@ -32,7 +33,8 @@ export function TranslationTable({
                                      onUpdateTranslation,
                                      onDeleteTranslation,
                                      selectedKeys = new Set<string>(),
-                                     onSelectionChange
+                                     onSelectionChange,
+                                     hideCompleted = false
                                  }: TranslationTableProps) {
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -64,10 +66,20 @@ export function TranslationTable({
         setExpandedSections(newExpanded);
     };
 
+    // Check if a translation is complete (has values for all languages)
+    const isTranslationComplete = (translation: FlattenedTranslation): boolean => {
+        return languages.every(lang => !!translation.values[lang]);
+    };
+    
+    // Filter translations based on hideCompleted setting
+    const filteredTranslations = hideCompleted 
+        ? translations.filter(translation => !isTranslationComplete(translation))
+        : translations;
+    
     const groupTranslationsBySection = () => {
         const groups: Record<string, FlattenedTranslation[]> = {};
 
-        translations.forEach(translation => {
+        filteredTranslations.forEach(translation => {
             const section = translation.section;
             if (!groups[section]) {
                 groups[section] = [];
@@ -161,7 +173,7 @@ export function TranslationTable({
         // If shift key is pressed, we want to select a range
         if (event?.shiftKey && localSelectedKeys.size > 0) {
             // Find the last selected key and current key indices
-            const allKeys = translations.map(t => t.key);
+            const allKeys = filteredTranslations.map(t => t.key);
             const lastSelectedKey = Array.from(localSelectedKeys).pop();
             const lastSelectedIndex = allKeys.indexOf(lastSelectedKey || '');
             const currentIndex = allKeys.indexOf(key);
@@ -193,7 +205,7 @@ export function TranslationTable({
     };
 
     const toggleSectionSelection = (section: string, selected: boolean) => {
-        const sectionKeys = translations
+        const sectionKeys = filteredTranslations
             .filter(t => t.section === section)
             .map(t => t.key);
 
@@ -218,15 +230,15 @@ export function TranslationTable({
     };
 
     const isSectionFullySelected = (section: string): boolean => {
-        const sectionKeys = translations
+        const sectionKeys = filteredTranslations
             .filter(t => t.section === section)
             .map(t => t.key);
 
-        return sectionKeys.every(key => localSelectedKeys.has(key));
+        return sectionKeys.length > 0 && sectionKeys.every(key => localSelectedKeys.has(key));
     };
 
     const isSectionPartiallySelected = (section: string): boolean => {
-        const sectionKeys = translations
+        const sectionKeys = filteredTranslations
             .filter(t => t.section === section)
             .map(t => t.key);
 
@@ -251,6 +263,19 @@ export function TranslationTable({
                     targetLanguage={translationDialogData.targetLanguage}
                     translationKey={translationDialogData.key}
                 />
+            )}
+            
+            {/* Show message when all translations are complete and hide completed is on */}
+            {hideCompleted && Object.keys(groupedTranslations).length === 0 && (
+                <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-8 text-center">
+                    <div className="flex flex-col items-center justify-center gap-4">
+                        <Check className="h-12 w-12 text-green-400 p-2 bg-green-400/20 rounded-full" />
+                        <h3 className="text-xl font-semibold text-green-300">All translations are complete!</h3>
+                        <p className="text-gray-400 max-w-md">
+                            There are no incomplete translations to display. You can turn off the "Hide Completed" toggle to view all translations.
+                        </p>
+                    </div>
+                </div>
             )}
 
             {Object.entries(groupedTranslations).map(([section, sectionTranslations]) => {
