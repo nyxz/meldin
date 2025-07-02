@@ -5,11 +5,15 @@ import { withAuth } from 'next-auth/middleware';
 export default withAuth(
   // `withAuth` augments your `Request` with the user's token.
   function middleware(req) {
+    console.log('middleware', req.nextUrl.href);
     return NextResponse.next();
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token,
+      authorized: ({ token }) => {
+        console.log('middleware.callbacks.authorized', token)
+        return !!token
+      },
     },
     pages: {
       signIn: '/login',
