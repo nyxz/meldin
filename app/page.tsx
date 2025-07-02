@@ -257,7 +257,7 @@ export default function Home() {
                         </Button>
                     </div>
                 </div>
-                <p className="text-gray-400 text-lg max-w-2xl mx-auto text-center">
+                <p className="text-gray-400 text-base max-w-2xl">
                     Manage your next-intl translations with ease. Upload your source file and target translations to
                     compare, edit, and export your localization files.
                 </p>
@@ -414,6 +414,27 @@ export default function Home() {
                                 <ArrowLeft className="w-4 h-4 mr-2"/>
                                 Back to Upload
                             </Button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={toggleFullWidth}
+                                className="border-gray-700 hover:border-gray-600"
+                            >
+                                {isFullWidth ? (
+                                    <>
+                                        <Minimize2 className="w-4 h-4 mr-2"/>
+                                        Collapse View
+                                    </>
+                                ) : (
+                                    <>
+                                        <Maximize2 className="w-4 h-4 mr-2"/>
+                                        Expand View
+                                    </>
+                                )}
+                            </Button>
 
                             <Button
                                 variant="outline"
@@ -428,25 +449,6 @@ export default function Home() {
                                 Logout
                             </Button>
                         </div>
-
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={toggleFullWidth}
-                            className="border-gray-700 hover:border-gray-600"
-                        >
-                            {isFullWidth ? (
-                                <>
-                                    <Minimize2 className="w-4 h-4 mr-2"/>
-                                    Collapse View
-                                </>
-                            ) : (
-                                <>
-                                    <Maximize2 className="w-4 h-4 mr-2"/>
-                                    Expand View
-                                </>
-                            )}
-                        </Button>
                     </div>
 
                     <div className="flex items-center justify-between">
