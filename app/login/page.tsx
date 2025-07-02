@@ -11,7 +11,7 @@ import {Languages, Lock} from 'lucide-react';
 
 export default function LoginPageWithSuspense() {
     return (
-        <Suspense>
+        <Suspense fallback={<div className={'flex items-center justify-center h-screen'}>Loading...</div>}>
             <LoginPage/>
         </Suspense>
     )
@@ -34,21 +34,20 @@ function LoginPage() {
         setErrorMessage('');
 
         try {
-            const result = await signIn('credentials', {
+            // Use redirect: true to let NextAuth handle the redirection
+            await signIn('credentials', {
                 username,
                 password,
-                redirect: false,
+                callbackUrl,
+                redirect: true,
             });
-
-            if (result?.error) {
-                setErrorMessage('Invalid username or password');
-            } else {
-                router.push(callbackUrl);
-            }
+            
+            // The code below won't execute if redirect is true and login is successful
+            // It's only here as a fallback
+            setIsLoading(false);
         } catch (error) {
             setErrorMessage('An error occurred during login');
             console.error('Login error:', error);
-        } finally {
             setIsLoading(false);
         }
     };

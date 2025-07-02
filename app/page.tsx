@@ -6,7 +6,7 @@ import {Button} from '@/components/ui/button';
 import {Badge} from '@/components/ui/badge';
 import {FileUpload} from '@/components/file-upload';
 import {TranslationTable} from '@/components/translation-table';
-import {ArrowLeft, Download, FileText, Languages, Maximize2, Minimize2, Sparkles, Trash2, LogOut} from 'lucide-react';
+import {ArrowLeft, Download, FileText, Languages, LogOut, Maximize2, Minimize2, Sparkles, Trash2} from 'lucide-react';
 import {Loader} from '@/components/ui/loader';
 import {ConfirmationDialog} from '@/components/confirmation-dialog';
 import {signOut, useSession} from 'next-auth/react';
@@ -27,6 +27,23 @@ interface FlattenedTranslation {
 // View states
 type ViewState = 'upload' | 'results';
 
+
+const flattenObject = (obj: Record<string, any>, prefix = ''): Record<string, string> => {
+    const flattened: Record<string, string> = {};
+
+    for (const key in obj) {
+        const newKey = prefix ? `${prefix}.${key}` : key;
+
+        if (typeof obj[key] === 'object' && obj[key] !== null) {
+            Object.assign(flattened, flattenObject(obj[key], newKey));
+        } else {
+            flattened[newKey] = obj[key]?.toString() || '';
+        }
+    }
+
+    return flattened;
+};
+
 export default function Home() {
     const [sourceFile, setSourceFile] = useState<TranslationFile | null>(null);
     const [targetFiles, setTargetFiles] = useState<TranslationFile[]>([]);
@@ -34,7 +51,7 @@ export default function Home() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [viewState, setViewState] = useState<ViewState>('upload');
     const [isFullWidth, setIsFullWidth] = useState(false);
-    const { data: session } = useSession();
+    const {data: session, status} = useSession();
     // Selection state
     const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
@@ -43,21 +60,6 @@ export default function Home() {
     const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
     const [isBulkDelete, setIsBulkDelete] = useState(false);
 
-    const flattenObject = (obj: Record<string, any>, prefix = ''): Record<string, string> => {
-        const flattened: Record<string, string> = {};
-
-        for (const key in obj) {
-            const newKey = prefix ? `${prefix}.${key}` : key;
-
-            if (typeof obj[key] === 'object' && obj[key] !== null) {
-                Object.assign(flattened, flattenObject(obj[key], newKey));
-            } else {
-                flattened[newKey] = obj[key]?.toString() || '';
-            }
-        }
-
-        return flattened;
-    };
 
     const processTranslations = useCallback(() => {
         if (!sourceFile) return;
@@ -96,6 +98,19 @@ export default function Home() {
             setViewState('results');
         }, 500); // Small delay to show the loader
     }, [sourceFile, targetFiles]);
+
+    // Show loading state while session is being fetched
+    if (status === "loading") {
+        return (
+            <div className="min-h-screen bg-gray-950 text-gray-100 flex items-center justify-center">
+                <div className="text-center">
+                    <div
+                        className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500 mb-4"></div>
+                    <p className="text-gray-400">Loading session...</p>
+                </div>
+            </div>
+        );
+    }
 
     const handleSourceFileUpload = (file: TranslationFile) => {
         setSourceFile(file);
@@ -210,7 +225,6 @@ export default function Home() {
 
     // Render the header section
     const renderHeader = () => {
-        
         return (
             <div className="mb-12">
                 <div className="flex items-center justify-between mb-4">
@@ -232,7 +246,10 @@ export default function Home() {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => signOut({ callbackUrl: '/login' })}
+                            onClick={() => signOut({
+                                callbackUrl: '/login',
+                                redirect: true
+                            })}
                             className="border-gray-700 hover:border-gray-600"
                         >
                             <LogOut className="w-4 h-4 mr-2"/>
@@ -397,11 +414,14 @@ export default function Home() {
                                 <ArrowLeft className="w-4 h-4 mr-2"/>
                                 Back to Upload
                             </Button>
-                            
+
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => signOut({ callbackUrl: '/login' })}
+                                onClick={() => signOut({
+                                    callbackUrl: '/login',
+                                    redirect: true
+                                })}
                                 className="border-gray-700 hover:border-gray-600"
                             >
                                 <LogOut className="w-4 h-4 mr-2"/>

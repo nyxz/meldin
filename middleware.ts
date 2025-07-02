@@ -17,16 +17,16 @@ export default withAuth(
   }
 );
 
-// See "Matching Paths" below to learn more
+// Configure which paths require authentication
 export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
      * - api/auth (NextAuth.js API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
+     * - _next (Next.js internals)
+     * - login (login page)
+     * - favicon.ico, robots.txt, etc. (static files)
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api/auth|_next|login|favicon.ico|robots.txt).*)',
   ],
 };
