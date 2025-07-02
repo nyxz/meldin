@@ -1,11 +1,11 @@
 ## Meldin
+#### A simple translation manager.
 
-#### Simple translation manager
+This is a web-based tool where you can upload, compare and fill out translations files. You can use AI to assist with filling out missing translations.
 
-![Meldin screenshot](./screenshot.png "Meldin")
+![Meldin quick demo](./demo.gif "Meldin Demo")
 
-This is a web-based tool where I can upload my translation files and compare the translations between different languages.
-Example files are like en.json, fr.json, de.json - standard for libraries like [next-intl](https://next-intl.dev/).
+Example files are like `en.json`, `fr.json`, `de.json` - standard for libraries like [next-intl](https://next-intl.dev/).
 
 Here is a sample nested JSON structure:
 ```json
@@ -14,16 +14,36 @@ Here is a sample nested JSON structure:
     "create": "Create",
     "update": "Update",
     "delete": "Delete",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "save": "Save"
   },
-  "Countries": {
-    "label": "Country",
-    "placeholder": "Select country"
+  "DataTable": {
+    "selected": "{count} of {total} row(s) selected",
+    "perPage": "Rows per page",
+    "totalItems": "Total: {count}",
+    "page": "Page {page} of {total}",
+    "filters": "Filters",
+    "clearFilters": "Clear filters",
+    "noData": "No results",
+    "sort": {
+      "asc": "Asc",
+      "desc": "Desc"
+    }
+  },
+  "ComingSoon": {
+    "title": "Coming Soon",
+    "subtitle": "We are working on this feature. Stay tuned!",
+    "back": "Back to home page"
   }
 }
 ```
 
-On the main page users specify the source file, which would be for example en.json. Then the other translation files will be uploaded as well (like fr.json and the de.json), then they are matched against the source file's keys.
-The translations are compared in a table-like format with columns: Key, EN, FR, DE. The values under the first column should be show like "Generic.create", "Generic.update", etc. Under the language columns we should have the translation from the respective file. Where there is no value the field is highlighted. Note the translation texts could be long.
-It's important to be able to collapse the first level of the translation. So in the example above by default users only see the "Generic" and "Countries" sections. Then I can expand the area and see all their keys.
-After users are happy with the translations they should be able to download them file by file with all translations updated.
+### Get started
+
+To get started copy the `.env.example` file into `.env.local` and add your own values. Then run `npm install && npm run dev`.
+
+You will need an OpenAI API key in order to use the AI assistant. If you want you can try another LLM by changing the setup in [./app/api/translate/route.ts](./app/api/translate/route.ts) and [./app/api/translate-batch/route.ts](./app/api/translate-batch/route.ts).
+
+### Deployment
+
+You can deploy this app using Vercel or any other hosting provider that supports Next.js. Just make sure to set up environment variables as described above.
