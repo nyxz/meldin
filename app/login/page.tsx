@@ -1,24 +1,15 @@
 'use client';
 
-import {Suspense, useState} from 'react';
+import {useState} from 'react';
 import {signIn} from 'next-auth/react';
-import {useRouter, useSearchParams} from 'next/navigation';
+import {useSearchParams} from 'next/navigation';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import {Languages, Lock} from 'lucide-react';
 
-export default function LoginPageWithSuspense() {
-    return (
-        <Suspense fallback={<div className={'flex items-center justify-center h-screen'}>Loading...</div>}>
-            <LoginPage/>
-        </Suspense>
-    )
-}
-
-function LoginPage() {
-    const router = useRouter();
+export default function LoginPage() {
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get('callbackUrl') || '/';
     const error = searchParams.get('error');
@@ -41,7 +32,7 @@ function LoginPage() {
                 callbackUrl,
                 redirect: true,
             });
-            
+
             // The code below won't execute if redirect is true and login is successful
             // It's only here as a fallback
             setIsLoading(false);
