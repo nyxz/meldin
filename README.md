@@ -42,6 +42,8 @@ Here is a sample nested JSON structure:
 
 To get started copy the `.env.example` file into `.env.local` and add your own values. Then run `npm install && npm run dev`.
 
+Navigate to http://localhost:3000 and login with `admin` / `1234` if you haven't changed the default credentials. Then start uploading some files!
+
 You will need an OpenAI API key in order to use the AI assistant. If you want you can try another LLM by changing the setup in [./app/api/translate/route.ts](./app/api/translate/route.ts) and [./app/api/translate-batch/route.ts](./app/api/translate-batch/route.ts).
 
 ### Deployment
