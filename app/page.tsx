@@ -88,7 +88,7 @@ export default function Home() {
     const [showBatchTranslateDialog, setShowBatchTranslateDialog] = useState(false);
     const [batchTargetLanguage, setBatchTargetLanguage] = useState<string>('');
     const [isBatchTranslating, setIsBatchTranslating] = useState(false);
-    
+
     // View options
     const [hideCompleted, setHideCompleted] = useState(false);
 
@@ -325,7 +325,7 @@ export default function Home() {
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="font-medium text-cyan-300">{sourceFile.name}</p>
-                                            <p className="text-sm text-gray-400">Language: {sourceFile.language}</p>
+                                            <p className="text-sm text-gray-400">Language: {getLanguageName(sourceFile.language)}</p>
                                         </div>
                                         <Badge variant="secondary"
                                                className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30">
@@ -369,7 +369,7 @@ export default function Home() {
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="font-medium text-purple-300">{file.name}</p>
-                                            <p className="text-sm text-gray-400">Language: {file.language}</p>
+                                            <p className="text-sm text-gray-400">Language: {getLanguageName(file.language)}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Badge variant="secondary"
@@ -524,7 +524,7 @@ export default function Home() {
                                 </Button>
                             ))}
                         </div>
-                        
+
                         <Button
                             variant="outline"
                             size="sm"
