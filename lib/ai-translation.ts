@@ -142,7 +142,7 @@ export function getLanguageName(code: string): string {
         th: 'Thai',
         bg: 'Bulgarian',
         el: 'Greek',
-        cz: 'Czech'
+        cs: 'Czech'
     };
 
     return languageMap[code] || code;
