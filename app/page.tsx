@@ -439,7 +439,7 @@ export default function Home() {
     // Render the results view
     const renderResultsView = () => (
         <>
-            <div className={`transition-all duration-300 ${isFullWidth ? 'max-w-none' : 'max-w-7xl mx-auto'}`}>
+            <div className={`transition-all duration-300 pb-20 ${isFullWidth ? 'max-w-none' : 'max-w-7xl mx-auto'}`}>
                 <div className="mb-8">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-2">
