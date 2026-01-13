@@ -35,7 +35,8 @@ export async function POST(req: NextRequest) {
         }
 
         // Prepare the prompt for batch translation
-        const prompt = `You are a professional translator. Translate the given texts accurately while preserving the meaning and tone.
+        const prompt = `You are a professional translator. Translate the given texts accurately while preserving the meaning and tone. 
+        Make sure the messages sound natural regarding the target language.
     
     Translate the following texts from ${sourceLanguage} to ${targetLanguage}. 
     Return a JSON array with objects containing "key" and "translatedText" properties.
@@ -52,7 +53,6 @@ export async function POST(req: NextRequest) {
             model: openai(modelName),
             prompt: prompt,
             temperature: 0.3,
-            maxTokens: 2000,
         });
 
         // Parse the JSON response

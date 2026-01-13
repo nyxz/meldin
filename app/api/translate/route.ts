@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
         const prompt = `You are a professional translator. Provide accurate translations without additional commentary.
     
     Translate the following text from ${sourceLanguage} to ${targetLanguage}. 
-    Maintain the same tone, formality level, and meaning. Only return the translated text without any explanations.
+    Maintain the same tone, formality level, and meaning. Make sure the messages sound natural regarding the target language. 
+    Only return the translated text without any explanations.
     
     Text to translate: "${text}"`;
 
@@ -29,8 +30,7 @@ export async function POST(req: NextRequest) {
         const {text: translatedText} = await generateText({
             model: openai(modelName),
             prompt: prompt,
-            temperature: 0.3,
-            maxTokens: 1000,
+            temperature: 0.3
         });
 
         // Return a response with the translated text
