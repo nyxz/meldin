@@ -1,3 +1,9 @@
+---
+description: Repository Information Overview
+globs: []
+alwaysApply: true
+---
+
 
 ## Use case ##
 
