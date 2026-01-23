@@ -6,9 +6,20 @@ import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {Badge} from '@/components/ui/badge';
 import {Checkbox} from '@/components/ui/checkbox';
-import {AlertCircle, Check, ChevronDown, ChevronRight, MinusCircle, Sparkles, Trash2} from 'lucide-react';
+import {
+    AlertCircle,
+    Check,
+    ChevronDown,
+    ChevronRight,
+    Loader,
+    MinusCircle,
+    Sparkles,
+    Trash2,
+    Wand2
+} from 'lucide-react';
 import {cn} from '@/lib/utils';
 import {AITranslationDialog} from '@/components/ai-translation-dialog';
+import {getLanguageName} from '@/lib/ai-translation';
 
 interface FlattenedTranslation {
     key: string;
@@ -25,6 +36,7 @@ interface TranslationTableProps {
     selectedKeys?: Set<string>;
     onSelectionChange?: (keys: Set<string>) => void;
     hideCompleted?: boolean;
+    changedKeys?: Map<string, Set<string>>;
 }
 
 export function TranslationTable({
@@ -34,7 +46,8 @@ export function TranslationTable({
                                      onDeleteTranslation,
                                      selectedKeys = new Set<string>(),
                                      onSelectionChange,
-                                     hideCompleted = false
+                                     hideCompleted = false,
+                                     changedKeys = new Map()
                                  }: TranslationTableProps) {
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -48,7 +61,7 @@ export function TranslationTable({
         targetLanguage: string;
         sourceText: string;
         isBatch?: boolean;
-        batchItems?: Array<{key: string, text: string}>;
+        batchItems?: Array<{ key: string, text: string }>;
     } | null>(null);
 
     // Sync with parent component's selection state
@@ -70,12 +83,12 @@ export function TranslationTable({
     const isTranslationComplete = (translation: FlattenedTranslation): boolean => {
         return languages.every(lang => !!translation.values[lang]);
     };
-    
+
     // Filter translations based on hideCompleted setting
-    const filteredTranslations = hideCompleted 
+    const filteredTranslations = hideCompleted
         ? translations.filter(translation => !isTranslationComplete(translation))
         : translations;
-    
+
     const groupTranslationsBySection = () => {
         const groups: Record<string, FlattenedTranslation[]> = {};
 
@@ -127,36 +140,36 @@ export function TranslationTable({
         });
         setIsTranslationDialogOpen(true);
     };
-    
+
     // Batch AI Translation handling
     const openBatchTranslationDialog = (targetLanguage: string) => {
         if (localSelectedKeys.size === 0) {
             alert('Please select at least one translation to translate');
             return;
         }
-        
+
         // Get the source language (first language in the list)
         const sourceLanguage = languages[0];
-        
+
         // Collect all selected translations
-        const selectedTranslations = translations.filter(t => 
+        const selectedTranslations = translations.filter(t =>
             localSelectedKeys.has(t.key) && t.values[sourceLanguage]
         );
-        
+
         if (selectedTranslations.length === 0) {
             alert('No source texts available for translation');
             return;
         }
-        
+
         // Create batch items
         const batchItems = selectedTranslations.map(t => ({
             key: t.key,
             text: t.values[sourceLanguage] || ''
         }));
-        
+
         // Use the first item's text as the sample text
         const sampleText = batchItems[0].text;
-        
+
         setTranslationDialogData({
             key: 'batch', // Special key for batch translations
             sourceLanguage,
@@ -166,6 +179,62 @@ export function TranslationTable({
             batchItems
         });
         setIsTranslationDialogOpen(true);
+    };
+
+    // Translate all missing languages for a specific row
+    const [isTranslatingRow, setIsTranslatingRow] = useState<string | null>(null);
+
+    const translateRow = async (key: string) => {
+        const translation = translations.find(t => t.key === key);
+        if (!translation) return;
+
+        const sourceLanguage = languages[0];
+        const sourceText = translation.values[sourceLanguage];
+
+        if (!sourceText) {
+            alert('No source text available for translation');
+            return;
+        }
+
+        // Find all languages missing translation
+        const missingLanguages = languages.slice(1).filter(lang => !translation.values[lang]);
+
+        if (missingLanguages.length === 0) {
+            alert('All languages are already translated');
+            return;
+        }
+
+        setIsTranslatingRow(key);
+
+        try {
+            // Translate to each missing language
+            for (const targetLanguage of missingLanguages) {
+                const result = await fetch('/api/translate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: sourceText,
+                        sourceLanguage: getLanguageName(sourceLanguage),
+                        targetLanguage: getLanguageName(targetLanguage),
+                    }),
+                });
+
+                if (!result.ok) {
+                    throw new Error(`Failed to translate to ${targetLanguage}`);
+                }
+
+                const translatedText = await result.text();
+                const cleanResult = translatedText.replace(/^["']|["']$/g, '').trim();
+                onUpdateTranslation(key, targetLanguage, cleanResult);
+            }
+        } catch (error) {
+            console.error('Row translation error:', error);
+            alert('Failed to translate row. Please try again.');
+        } finally {
+            setIsTranslatingRow(null);
+        }
     };
 
     // Selection handling
@@ -264,15 +333,16 @@ export function TranslationTable({
                     translationKey={translationDialogData.key}
                 />
             )}
-            
+
             {/* Show message when all translations are complete and hide completed is on */}
             {hideCompleted && Object.keys(groupedTranslations).length === 0 && (
                 <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-8 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
-                        <Check className="h-12 w-12 text-green-400 p-2 bg-green-400/20 rounded-full" />
+                        <Check className="h-12 w-12 text-green-400 p-2 bg-green-400/20 rounded-full"/>
                         <h3 className="text-xl font-semibold text-green-300">All translations are complete!</h3>
                         <p className="text-gray-400 max-w-md">
-                            There are no incomplete translations to display. You can turn off the "Hide Completed" toggle to view all translations.
+                            There are no incomplete translations to display. You can turn off the "Hide Completed"
+                            toggle to view all translations.
                         </p>
                     </div>
                 </div>
@@ -374,11 +444,12 @@ export function TranslationTable({
                                                     className="text-left p-4 font-semibold text-gray-300 min-w-[200px]">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="uppercase text-xs px-2 py-1 bg-gray-700 rounded">
+                                                            <span
+                                                                className="uppercase text-xs px-2 py-1 bg-gray-700 rounded">
                                                                 {language}
                                                             </span>
                                                         </div>
-                                                        
+
                                                         {/* Only show batch translate button for non-source languages */}
                                                         {index > 0 && localSelectedKeys.size > 0 && (
                                                             <Button
@@ -388,7 +459,7 @@ export function TranslationTable({
                                                                 onClick={() => openBatchTranslationDialog(language)}
                                                                 title={`Translate selected items to ${language}`}
                                                             >
-                                                                <Sparkles className="w-3 h-3 mr-1" />
+                                                                <Sparkles className="w-3 h-3 mr-1"/>
                                                                 Batch AI
                                                             </Button>
                                                         )}
@@ -444,6 +515,7 @@ export function TranslationTable({
                                                     const cellId = `${translation.key}-${language}`;
                                                     const isEditing = editingCell === cellId;
                                                     const isEmpty = !value;
+                                                    const isChanged = changedKeys.has(translation.key) && changedKeys.get(translation.key)!.has(language);
 
                                                     return (
                                                         <td key={language} className="p-4">
@@ -465,10 +537,12 @@ export function TranslationTable({
                                                             ) : (
                                                                 <div
                                                                     className={cn(
-                                                                        'p-2 rounded cursor-pointer min-h-[2.5rem] flex items-center transition-all',
+                                                                        'p-2 rounded cursor-pointer min-h-[2.5rem] flex items-center transition-all relative',
                                                                         isEmpty
                                                                             ? 'bg-red-500/10 border border-red-500/30 hover:bg-red-500/20'
-                                                                            : 'bg-gray-800/50 hover:bg-gray-700/50 border border-transparent hover:border-gray-600'
+                                                                            : isChanged
+                                                                                ? 'bg-green-500/20 border border-green-500/50 hover:bg-green-500/30 shadow-sm shadow-green-500/20'
+                                                                                : 'bg-gray-800/50 hover:bg-gray-700/50 border border-transparent hover:border-gray-600'
                                                                     )}
                                                                     onClick={() => setEditingCell(cellId)}
                                                                 >
@@ -497,10 +571,19 @@ export function TranslationTable({
                                                                             )}
                                                                         </div>
                                                                     ) : (
-                                                                        <span
-                                                                            className="text-gray-200 text-sm leading-5">
-                                                                            {value}
-                                                                        </span>
+                                                                        <div
+                                                                            className="flex items-center justify-between w-full gap-2">
+                                                                            <span
+                                                                                className="text-gray-200 text-sm leading-5">
+                                                                                {value}
+                                                                            </span>
+                                                                            {isChanged && (
+                                                                                <Badge
+                                                                                    className="bg-green-500/30 text-green-200 border-green-500/50 text-xs px-1.5 py-0 h-5 flex-shrink-0">
+                                                                                    New
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
                                                                     )}
                                                                 </div>
                                                             )}
@@ -509,15 +592,31 @@ export function TranslationTable({
                                                 })}
                                                 {onDeleteTranslation && (
                                                     <td className="p-2 text-center">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => onDeleteTranslation(translation.key)}
-                                                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
-                                                            title="Delete this translation key"
-                                                        >
-                                                            <Trash2 className="w-4 h-4"/>
-                                                        </Button>
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => translateRow(translation.key)}
+                                                                disabled={isTranslatingRow === translation.key}
+                                                                className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-8 w-8 p-0"
+                                                                title="Translate all missing languages for this key"
+                                                            >
+                                                                {isTranslatingRow === translation.key ? (
+                                                                    <Loader className="w-4 h-4 animate-spin"/>
+                                                                ) : (
+                                                                    <Wand2 className="w-4 h-4"/>
+                                                                )}
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => onDeleteTranslation(translation.key)}
+                                                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
+                                                                title="Delete this translation key"
+                                                            >
+                                                                <Trash2 className="w-4 h-4"/>
+                                                            </Button>
+                                                        </div>
                                                     </td>
                                                 )}
                                             </tr>

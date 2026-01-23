@@ -17,8 +17,12 @@ import {
     LogOut,
     Maximize2,
     Minimize2,
+    Pause,
+    Play,
     Sparkles,
-    Trash2
+    Square,
+    Trash2,
+    Wand2
 } from 'lucide-react';
 import {Loader} from '@/components/ui/loader';
 import {ConfirmationDialog} from '@/components/confirmation-dialog';
@@ -34,6 +38,7 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from '@/
 import {BatchTranslationItem, getLanguageName, translateBatch} from '@/lib/ai-translation';
 import {signOut, useSession} from 'next-auth/react';
 import {cn} from '@/lib/utils';
+import {useAutoTranslate} from '@/hooks/use-auto-translate';
 
 interface TranslationFile {
     name: string;
@@ -92,6 +97,8 @@ export default function Home() {
     // View options
     const [hideCompleted, setHideCompleted] = useState(false);
 
+    // Track changed/translated keys
+    const [changedKeys, setChangedKeys] = useState<Map<string, Set<string>>>(new Map());
 
     const processTranslations = useCallback(() => {
         if (!sourceFile) return;
@@ -132,10 +139,42 @@ export default function Home() {
             });
 
             setTranslations(processed);
+            setChangedKeys(new Map());
             setIsProcessing(false);
             setViewState('results');
         }, 500); // Small delay to show the loader
     }, [sourceFile, targetFiles]);
+
+    const updateTranslation = (key: string, language: string, value: string) => {
+        setTranslations(prev =>
+            prev.map(translation =>
+                translation.key === key
+                    ? {...translation, values: {...translation.values, [language]: value}}
+                    : translation
+            )
+        );
+
+        setChangedKeys(prev => {
+            const newMap = new Map(prev);
+            if (!newMap.has(key)) {
+                newMap.set(key, new Set());
+            }
+            newMap.get(key)!.add(language);
+            return newMap;
+        });
+    };
+
+    // Auto-translate hook
+    const autoTranslate = useAutoTranslate({
+        onTranslate: updateTranslation,
+        onComplete: () => {
+            console.log('Auto-translation completed');
+        },
+        onError: (error) => {
+            console.error('Auto-translation error:', error);
+            alert(`Auto-translation failed: ${error}`);
+        }
+    });
 
     // Show loading state while session is being fetched
     if (status === "loading") {
@@ -170,16 +209,6 @@ export default function Home() {
     const removeTargetFile = (language: string) => {
         setTargetFiles(prev => prev.filter(f => f.language !== language));
         setTranslations([]);
-    };
-
-    const updateTranslation = (key: string, language: string, value: string) => {
-        setTranslations(prev =>
-            prev.map(translation =>
-                translation.key === key
-                    ? {...translation, values: {...translation.values, [language]: value}}
-                    : translation
-            )
-        );
     };
 
     const deleteTranslation = (key: string) => {
@@ -251,6 +280,33 @@ export default function Home() {
             const missing = Object.values(translation.values).filter(value => !value).length;
             return count + missing;
         }, 0);
+    };
+
+    const handleAutoTranslate = () => {
+        const allLanguages = getAllLanguages();
+        const sourceLanguage = allLanguages[0];
+        const targetLanguages = allLanguages.slice(1);
+
+        const keysToTranslate = translations
+            .filter(translation => {
+                return targetLanguages.some(lang => !translation.values[lang]);
+            })
+            .map(translation => ({
+                key: translation.key,
+                sourceText: translation.values[sourceLanguage] || ''
+            }))
+            .filter(item => item.sourceText.trim() !== '');
+
+        if (keysToTranslate.length === 0) {
+            alert('No keys to translate');
+            return;
+        }
+
+        const targetLanguagesWithMissing = targetLanguages.filter(lang => {
+            return translations.some(t => !t.values[lang]);
+        });
+
+        void autoTranslate.startAutoTranslate(keysToTranslate, sourceLanguage, targetLanguagesWithMissing);
     };
 
     const goBackToUpload = () => {
@@ -525,27 +581,88 @@ export default function Home() {
                             ))}
                         </div>
 
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setHideCompleted(!hideCompleted)}
-                            className={cn(
-                                "border-gray-700 hover:border-gray-600",
-                                hideCompleted && "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
+                        <div className="flex items-center gap-2">
+                            {autoTranslate.state.status === 'idle' && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleAutoTranslate}
+                                    disabled={getMissingCount() === 0}
+                                    className="border-purple-700 hover:border-purple-600 bg-purple-500/10 text-purple-300"
+                                >
+                                    <Wand2 className="w-4 h-4 mr-2"/>
+                                    Auto-Translate All
+                                </Button>
                             )}
-                        >
-                            {hideCompleted ? (
-                                <>
-                                    <Eye className="w-4 h-4 mr-2"/>
-                                    Show Completed
-                                </>
-                            ) : (
-                                <>
-                                    <EyeOff className="w-4 h-4 mr-2"/>
-                                    Hide Completed
-                                </>
+
+                            {(autoTranslate.state.status === 'running' || autoTranslate.state.status === 'paused') && (
+                                <div className="flex items-center gap-2">
+                                    <div
+                                        className="flex flex-col gap-1 px-3 py-1.5 bg-purple-500/10 border border-purple-500/30 rounded">
+                                        <div className="flex items-center gap-2">
+                                            <LoaderIcon className="w-3 h-3 animate-spin text-purple-400"/>
+                                            <span className="text-xs text-purple-300">
+                                                {autoTranslate.state.translatedCount} / {autoTranslate.state.totalCount}
+                                                {autoTranslate.state.currentLanguage && ` (${autoTranslate.state.currentLanguage})`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {autoTranslate.state.status === 'running' && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={autoTranslate.pause}
+                                            className="border-amber-700 hover:border-amber-600 bg-amber-500/10 text-amber-300"
+                                        >
+                                            <Pause className="w-4 h-4 mr-2"/>
+                                            Pause
+                                        </Button>
+                                    )}
+                                    {autoTranslate.state.status === 'paused' && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={autoTranslate.resume}
+                                            className="border-green-700 hover:border-green-600 bg-green-500/10 text-green-300"
+                                        >
+                                            <Play className="w-4 h-4 mr-2"/>
+                                            Resume
+                                        </Button>
+                                    )}
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={autoTranslate.stop}
+                                        className="border-red-700 hover:border-red-600 bg-red-500/10 text-red-300"
+                                    >
+                                        <Square className="w-4 h-4 mr-2"/>
+                                        Stop
+                                    </Button>
+                                </div>
                             )}
-                        </Button>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setHideCompleted(!hideCompleted)}
+                                className={cn(
+                                    "border-gray-700 hover:border-gray-600",
+                                    hideCompleted && "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
+                                )}
+                            >
+                                {hideCompleted ? (
+                                    <>
+                                        <Eye className="w-4 h-4 mr-2"/>
+                                        Show Completed
+                                    </>
+                                ) : (
+                                    <>
+                                        <EyeOff className="w-4 h-4 mr-2"/>
+                                        Hide Completed
+                                    </>
+                                )}
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Translation Table */}
@@ -557,6 +674,7 @@ export default function Home() {
                         selectedKeys={selectedKeys}
                         onSelectionChange={handleSelectionChange}
                         hideCompleted={hideCompleted}
+                        changedKeys={changedKeys}
                     />
                 </div>
             </div>
