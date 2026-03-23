@@ -523,6 +523,7 @@ export function TranslationTable({
                                                                 <Input
                                                                     defaultValue={value}
                                                                     autoFocus
+                                                                    onClick={(e) => e.stopPropagation()}
                                                                     onBlur={(e) => handleCellEdit(translation.key, language, e.target.value)}
                                                                     onKeyDown={(e) => {
                                                                         if (e.key === 'Enter') {
@@ -544,7 +545,7 @@ export function TranslationTable({
                                                                                 ? 'bg-green-500/20 border border-green-500/50 hover:bg-green-500/30 shadow-sm shadow-green-500/20'
                                                                                 : 'bg-gray-800/50 hover:bg-gray-700/50 border border-transparent hover:border-gray-600'
                                                                     )}
-                                                                    onClick={() => setEditingCell(cellId)}
+                                                                    onClick={(e) => { e.stopPropagation(); setEditingCell(cellId); }}
                                                                 >
                                                                     {isEmpty ? (
                                                                         <div
