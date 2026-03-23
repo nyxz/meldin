@@ -239,7 +239,21 @@ export default function Home() {
     };
 
     const downloadFile = async (language: string) => {
-        const fileTranslations = translations.reduce((acc, translation) => {
+        const convertNumericKeysToArrays = (obj: Record<string, any>): any => {
+            if (typeof obj !== 'object' || obj === null) return obj;
+            const keys = Object.keys(obj);
+            const isArray = keys.length > 0 && keys.every((k, i) => k === String(i));
+            if (isArray) {
+                return keys.map(k => convertNumericKeysToArrays(obj[k]));
+            }
+            const result: Record<string, any> = {};
+            for (const key of keys) {
+                result[key] = convertNumericKeysToArrays(obj[key]);
+            }
+            return result;
+        };
+
+        const rawTranslations = translations.reduce((acc, translation) => {
             const keys = translation.key.split('.');
             let current = acc;
 
@@ -253,6 +267,8 @@ export default function Home() {
             current[keys[keys.length - 1]] = translation.values[language] || '';
             return acc;
         }, {} as Record<string, any>);
+
+        const fileTranslations = convertNumericKeysToArrays(rawTranslations);
 
         const blob = new Blob([JSON.stringify(fileTranslations, null, 2)], {
             type: 'application/json'
