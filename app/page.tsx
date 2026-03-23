@@ -81,7 +81,7 @@ export default function Home() {
     const [translations, setTranslations] = useState<FlattenedTranslation[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [viewState, setViewState] = useState<ViewState>('upload');
-    const [isFullWidth, setIsFullWidth] = useState(false);
+    const [isFullWidth, setIsFullWidth] = useState(true);
     const {data: session, status} = useSession();
     // Selection state
     const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
