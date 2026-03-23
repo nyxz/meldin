@@ -8,6 +8,7 @@ import {FileUpload} from '@/components/file-upload';
 import {TranslationTable} from '@/components/translation-table';
 import {
     ArrowLeft,
+    ChevronDown,
     Download,
     Eye,
     EyeOff,
@@ -35,6 +36,7 @@ import {
     DialogTitle
 } from '@/components/ui/dialog';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from '@/components/ui/select';
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
 import {BatchTranslationItem, getLanguageName, translateBatch} from '@/lib/ai-translation';
 import {signOut, useSession} from 'next-auth/react';
 import {cn} from '@/lib/utils';
@@ -282,6 +284,12 @@ export default function Home() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    };
+
+    const downloadAll = async () => {
+        for (const language of getAllLanguages()) {
+            await downloadFile(language);
+        }
     };
 
     const getAllLanguages = () => {
@@ -583,18 +591,40 @@ export default function Home() {
                     {/* Download Buttons */}
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex flex-wrap gap-3">
-                            {getAllLanguages().map(language => (
-                                <Button
-                                    key={language}
-                                    onClick={() => downloadFile(language)}
-                                    variant="outline"
-                                    size="sm"
-                                    className="border-gray-700 hover:border-gray-600"
-                                >
-                                    <Download className="w-4 h-4 mr-2"/>
-                                    Download {language}.json
-                                </Button>
-                            ))}
+                            <Button
+                                onClick={downloadAll}
+                                variant="outline"
+                                size="sm"
+                                className="border-cyan-700 hover:border-cyan-500 bg-cyan-500/10 text-cyan-300"
+                            >
+                                <Download className="w-4 h-4 mr-2"/>
+                                Download All
+                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-gray-700 hover:border-gray-600"
+                                    >
+                                        <Download className="w-4 h-4 mr-2"/>
+                                        Download language
+                                        <ChevronDown className="w-3 h-3 ml-2"/>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="bg-gray-900 border-gray-700">
+                                    {getAllLanguages().map(language => (
+                                        <DropdownMenuItem
+                                            key={language}
+                                            onClick={() => downloadFile(language)}
+                                            className="text-gray-300 hover:text-white cursor-pointer"
+                                        >
+                                            <Download className="w-3 h-3 mr-2"/>
+                                            {language}.json
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
 
                         <div className="flex items-center gap-2">
