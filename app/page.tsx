@@ -144,6 +144,8 @@ export default function Home() {
             setChangedKeys(new Map());
             setIsProcessing(false);
             setViewState('results');
+            const hasMissing = processed.some(t => Object.values(t.values).some(v => !v));
+            setHideCompleted(hasMissing);
         }, 500); // Small delay to show the loader
     }, [sourceFile, targetFiles]);
 
