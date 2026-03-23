@@ -538,6 +538,17 @@ export default function Home() {
                                 description="Upload translation files for other languages"
                                 className="border-dashed border-purple-500/30 hover:border-purple-500/50"
                             />
+                            {sourceFile && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowAddLanguageDialog(true)}
+                                    className="w-full border-green-700 hover:border-green-500 bg-green-500/10 text-green-300"
+                                >
+                                    <Languages className="w-4 h-4 mr-2"/>
+                                    Add New Language
+                                </Button>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
