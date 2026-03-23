@@ -113,7 +113,10 @@ export function TranslationTable({
     };
 
     const handleCellEdit = (key: string, language: string, value: string) => {
-        onUpdateTranslation(key, language, value);
+        const current = translations.find(t => t.key === key)?.values[language] ?? '';
+        if (value !== current) {
+            onUpdateTranslation(key, language, value);
+        }
         setEditingCell(null);
     };
 
