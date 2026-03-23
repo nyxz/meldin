@@ -367,6 +367,22 @@ export default function Home() {
         void autoTranslate.startAutoTranslate(keysToTranslate, sourceLanguage, targetLanguagesWithMissing);
     };
 
+    const handleAutoTranslateLanguage = (language: string) => {
+        const sourceLanguage = getAllLanguages()[0];
+
+        const keysToTranslate = translations
+            .filter(t => !t.values[language])
+            .map(t => ({ key: t.key, sourceText: t.values[sourceLanguage] || '' }))
+            .filter(item => item.sourceText.trim() !== '');
+
+        if (keysToTranslate.length === 0) {
+            alert(`No missing keys for ${getLanguageName(language)}`);
+            return;
+        }
+
+        void autoTranslate.startAutoTranslate(keysToTranslate, sourceLanguage, [language]);
+    };
+
     const goBackToUpload = () => {
         setViewState('upload');
     };
@@ -672,16 +688,43 @@ export default function Home() {
 
                         <div className="flex items-center gap-2">
                             {autoTranslate.state.status === 'idle' && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleAutoTranslate}
-                                    disabled={getMissingCount() === 0}
-                                    className="border-purple-700 hover:border-purple-600 bg-purple-500/10 text-purple-300"
-                                >
-                                    <Wand2 className="w-4 h-4 mr-2"/>
-                                    Auto-Translate All
-                                </Button>
+                                <div className="flex items-center">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleAutoTranslate}
+                                        disabled={getMissingCount() === 0}
+                                        className="border-purple-700 hover:border-purple-600 bg-purple-500/10 text-purple-300 rounded-r-none border-r-0"
+                                    >
+                                        <Wand2 className="w-4 h-4 mr-2"/>
+                                        Auto-Translate All
+                                    </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={getMissingCount() === 0}
+                                                className="border-purple-700 hover:border-purple-600 bg-purple-500/10 text-purple-300 rounded-l-none px-2"
+                                            >
+                                                <ChevronDown className="w-3 h-3"/>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="bg-gray-900 border-gray-700">
+                                            {getAllLanguages().slice(1).map(lang => (
+                                                <DropdownMenuItem
+                                                    key={lang}
+                                                    onClick={() => handleAutoTranslateLanguage(lang)}
+                                                    disabled={!translations.some(t => !t.values[lang])}
+                                                    className="text-gray-300 hover:text-white cursor-pointer"
+                                                >
+                                                    <Wand2 className="w-3 h-3 mr-2"/>
+                                                    Translate all for {getLanguageName(lang)}
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
                             )}
 
                             {(autoTranslate.state.status === 'running' || autoTranslate.state.status === 'paused') && (
