@@ -10,6 +10,7 @@ import {
     ArrowLeft,
     ChevronDown,
     Download,
+    RotateCcw,
     Eye,
     EyeOff,
     FileText,
@@ -91,6 +92,7 @@ export default function Home() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
     const [isBulkDelete, setIsBulkDelete] = useState(false);
+    const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
     // Batch translation state
     const [showBatchTranslateDialog, setShowBatchTranslateDialog] = useState(false);
@@ -387,6 +389,16 @@ export default function Home() {
         setViewState('upload');
     };
 
+    const resetAll = () => {
+        setSourceFile(null);
+        setTargetFiles([]);
+        setTranslations([]);
+        setSelectedKeys(new Set());
+        setChangedKeys(new Map());
+        setHideCompleted(false);
+        setViewState('upload');
+    };
+
     const toggleFullWidth = () => {
         setIsFullWidth(prev => !prev);
     };
@@ -581,6 +593,15 @@ export default function Home() {
                             >
                                 <ArrowLeft className="w-4 h-4 mr-2"/>
                                 Back to Upload
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsResetDialogOpen(true)}
+                                className="border-red-800 hover:border-red-600 bg-red-500/10 text-red-400 hover:text-red-300"
+                            >
+                                <RotateCcw className="w-4 h-4 mr-2"/>
+                                Clear All
                             </Button>
                         </div>
 
@@ -1044,6 +1065,16 @@ export default function Home() {
             )}
 
             {/* Confirmation Dialog for Deleting Translation */}
+            <ConfirmationDialog
+                isOpen={isResetDialogOpen}
+                onClose={() => setIsResetDialogOpen(false)}
+                onConfirm={resetAll}
+                title="Clear All Files"
+                description="This will remove all loaded language files and translations. Any unsaved changes will be lost. Are you sure?"
+                confirmText="Clear All"
+                cancelText="Cancel"
+                variant="danger"
+            />
             <ConfirmationDialog
                 isOpen={isDeleteDialogOpen}
                 onClose={() => setIsDeleteDialogOpen(false)}
