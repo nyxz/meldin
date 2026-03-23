@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/dialog';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from '@/components/ui/select';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
+import {Input} from '@/components/ui/input';
 import {BatchTranslationItem, getLanguageName, translateBatch} from '@/lib/ai-translation';
 import {signOut, useSession} from 'next-auth/react';
 import {cn} from '@/lib/utils';
@@ -96,22 +97,22 @@ export default function Home() {
     const [batchTargetLanguage, setBatchTargetLanguage] = useState<string>('');
     const [isBatchTranslating, setIsBatchTranslating] = useState(false);
 
+    // Add language state
+    const [showAddLanguageDialog, setShowAddLanguageDialog] = useState(false);
+    const [newLanguageCode, setNewLanguageCode] = useState('');
+
     // View options
     const [hideCompleted, setHideCompleted] = useState(false);
 
     // Track changed/translated keys
     const [changedKeys, setChangedKeys] = useState<Map<string, Set<string>>>(new Map());
 
-    const processTranslations = useCallback(() => {
-        if (!sourceFile) return;
-
+    const runProcessTranslations = useCallback((src: TranslationFile, targets: TranslationFile[]) => {
         setIsProcessing(true);
 
-        // Use setTimeout to allow the UI to update and show the loader
         setTimeout(() => {
-            // Flatten all files once upfront for better performance
-            const sourceFlat = flattenObject(sourceFile.content);
-            const targetFlats = targetFiles.reduce((acc, file) => {
+            const sourceFlat = flattenObject(src.content);
+            const targetFlats = targets.reduce((acc, file) => {
                 acc[file.language] = flattenObject(file.content);
                 return acc;
             }, {} as Record<string, Record<string, string>>);
@@ -120,11 +121,10 @@ export default function Home() {
 
             const processed: FlattenedTranslation[] = allKeys.map(key => {
                 const values: Record<string, string> = {
-                    [sourceFile.language]: sourceFlat[key]
+                    [src.language]: sourceFlat[key]
                 };
 
-                // Use the pre-flattened objects for better performance
-                targetFiles.forEach(file => {
+                targets.forEach(file => {
                     values[file.language] = targetFlats[file.language][key] || '';
                 });
 
@@ -132,12 +132,7 @@ export default function Home() {
                 const section = parts[0];
                 const subsection = parts.length > 2 ? parts.slice(0, -1).join('.') : undefined;
 
-                return {
-                    key,
-                    values,
-                    section,
-                    subsection
-                };
+                return { key, values, section, subsection };
             });
 
             setTranslations(processed);
@@ -146,8 +141,13 @@ export default function Home() {
             setViewState('results');
             const hasMissing = processed.some(t => Object.values(t.values).some(v => !v));
             setHideCompleted(hasMissing);
-        }, 500); // Small delay to show the loader
-    }, [sourceFile, targetFiles]);
+        }, 500);
+    }, []);
+
+    const processTranslations = useCallback(() => {
+        if (!sourceFile) return;
+        runProcessTranslations(sourceFile, targetFiles);
+    }, [sourceFile, targetFiles, runProcessTranslations]);
 
     const updateTranslation = (key: string, language: string, value: string) => {
         setTranslations(prev =>
@@ -292,6 +292,38 @@ export default function Home() {
         for (const language of getAllLanguages()) {
             await downloadFile(language);
         }
+    };
+
+    const emptyClone = (obj: Record<string, any>): Record<string, any> => {
+        const result: Record<string, any> = {};
+        for (const key in obj) {
+            if (Array.isArray(obj[key])) {
+                result[key] = obj[key].map((item: any) =>
+                    typeof item === 'object' && item !== null ? emptyClone(item) : ''
+                );
+            } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                result[key] = emptyClone(obj[key]);
+            } else {
+                result[key] = '';
+            }
+        }
+        return result;
+    };
+
+    const handleAddLanguage = () => {
+        if (!sourceFile || !newLanguageCode.trim()) return;
+        const code = newLanguageCode.trim().toLowerCase();
+        if (getAllLanguages().includes(code)) return;
+        const newFile: TranslationFile = {
+            name: `${code}.json`,
+            content: emptyClone(sourceFile.content),
+            language: code,
+        };
+        const updatedTargets = [...targetFiles, newFile];
+        setTargetFiles(updatedTargets);
+        setShowAddLanguageDialog(false);
+        setNewLanguageCode('');
+        runProcessTranslations(sourceFile, updatedTargets);
     };
 
     const getAllLanguages = () => {
@@ -627,6 +659,15 @@ export default function Home() {
                                     ))}
                                 </DropdownMenuContent>
                             </DropdownMenu>
+                            <Button
+                                onClick={() => setShowAddLanguageDialog(true)}
+                                variant="outline"
+                                size="sm"
+                                className="border-green-700 hover:border-green-500 bg-green-500/10 text-green-300"
+                            >
+                                <Languages className="w-4 h-4 mr-2"/>
+                                Add Language
+                            </Button>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -855,6 +896,60 @@ export default function Home() {
                                     Translate {selectedKeys.size} Items
                                 </>
                             )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Add Language Dialog */}
+            <Dialog open={showAddLanguageDialog} onOpenChange={setShowAddLanguageDialog}>
+                <DialogContent className="bg-gray-900 border-gray-800 text-gray-100">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                            <Languages className="h-5 w-5 text-green-400"/>
+                            <span>Add Language</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-gray-400">
+                            A new empty translation file will be created from the source structure, ready for auto-translation.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 my-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-300">Language code</label>
+                            <Input
+                                value={newLanguageCode}
+                                onChange={e => setNewLanguageCode(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleAddLanguage()}
+                                placeholder="e.g. fr, de, ja"
+                                className="bg-gray-800 border-gray-700 text-gray-100 placeholder:text-gray-500"
+                            />
+                            {newLanguageCode.trim() && (
+                                <p className="text-xs text-gray-400">
+                                    {getLanguageName(newLanguageCode.trim().toLowerCase())} &mdash; will create <span className="text-green-400">{newLanguageCode.trim().toLowerCase()}.json</span>
+                                </p>
+                            )}
+                            {newLanguageCode.trim() && getAllLanguages().includes(newLanguageCode.trim().toLowerCase()) && (
+                                <p className="text-xs text-red-400">This language already exists.</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => { setShowAddLanguageDialog(false); setNewLanguageCode(''); }}
+                            className="border-gray-700 hover:bg-gray-800 hover:text-gray-100"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleAddLanguage}
+                            disabled={!newLanguageCode.trim() || getAllLanguages().includes(newLanguageCode.trim().toLowerCase())}
+                            className="bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white"
+                        >
+                            <Languages className="w-4 h-4 mr-2"/>
+                            Add Language
                         </Button>
                     </DialogFooter>
                 </DialogContent>
