@@ -11,8 +11,6 @@ import {
     ChevronDown,
     Download,
     RotateCcw,
-    Eye,
-    EyeOff,
     FileText,
     Languages,
     Loader as LoaderIcon,
@@ -104,7 +102,8 @@ export default function Home() {
     const [newLanguageCode, setNewLanguageCode] = useState('');
 
     // View options
-    const [hideCompleted, setHideCompleted] = useState(false);
+    type FilterMode = 'all' | 'completed' | 'new' | 'incomplete';
+    const [filterMode, setFilterMode] = useState<FilterMode>('all');
 
     // Track changed/translated keys
     const [changedKeys, setChangedKeys] = useState<Map<string, Set<string>>>(new Map());
@@ -142,7 +141,7 @@ export default function Home() {
             setIsProcessing(false);
             setViewState('results');
             const hasMissing = processed.some(t => Object.values(t.values).some(v => !v));
-            setHideCompleted(hasMissing);
+            setFilterMode(hasMissing ? 'incomplete' : 'all');
         }, 500);
     }, []);
 
@@ -395,7 +394,7 @@ export default function Home() {
         setTranslations([]);
         setSelectedKeys(new Set());
         setChangedKeys(new Map());
-        setHideCompleted(false);
+        setFilterMode('all');
         setViewState('upload');
     };
 
@@ -805,27 +804,20 @@ export default function Home() {
                                 </div>
                             )}
 
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setHideCompleted(!hideCompleted)}
-                                className={cn(
-                                    "border-gray-700 hover:border-gray-600",
-                                    hideCompleted && "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
-                                )}
-                            >
-                                {hideCompleted ? (
-                                    <>
-                                        <Eye className="w-4 h-4 mr-2"/>
-                                        Show Completed
-                                    </>
-                                ) : (
-                                    <>
-                                        <EyeOff className="w-4 h-4 mr-2"/>
-                                        Hide Completed
-                                    </>
-                                )}
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-400">Show:</span>
+                                <Select value={filterMode} onValueChange={(v) => setFilterMode(v as FilterMode)}>
+                                    <SelectTrigger className="h-8 w-[140px] border-gray-700 bg-transparent text-gray-300 text-sm">
+                                        <SelectValue/>
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-gray-900 border-gray-700">
+                                        <SelectItem value="all">All keys</SelectItem>
+                                        <SelectItem value="incomplete">Incomplete</SelectItem>
+                                        <SelectItem value="completed">Completed</SelectItem>
+                                        <SelectItem value="new">New only</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
 
@@ -837,7 +829,7 @@ export default function Home() {
                         onDeleteTranslation={deleteTranslation}
                         selectedKeys={selectedKeys}
                         onSelectionChange={handleSelectionChange}
-                        hideCompleted={hideCompleted}
+                        filterMode={filterMode}
                         changedKeys={changedKeys}
                     />
                 </div>

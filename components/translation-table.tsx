@@ -28,6 +28,8 @@ interface FlattenedTranslation {
     subsection?: string;
 }
 
+type FilterMode = 'all' | 'completed' | 'new' | 'incomplete';
+
 interface TranslationTableProps {
     translations: FlattenedTranslation[];
     languages: string[];
@@ -35,7 +37,7 @@ interface TranslationTableProps {
     onDeleteTranslation?: (key: string) => void;
     selectedKeys?: Set<string>;
     onSelectionChange?: (keys: Set<string>) => void;
-    hideCompleted?: boolean;
+    filterMode?: FilterMode;
     changedKeys?: Map<string, Set<string>>;
 }
 
@@ -46,7 +48,7 @@ export function TranslationTable({
                                      onDeleteTranslation,
                                      selectedKeys = new Set<string>(),
                                      onSelectionChange,
-                                     hideCompleted = false,
+                                     filterMode = 'all',
                                      changedKeys = new Map()
                                  }: TranslationTableProps) {
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -84,10 +86,19 @@ export function TranslationTable({
         return languages.every(lang => !!translation.values[lang]);
     };
 
-    // Filter translations based on hideCompleted setting
-    const filteredTranslations = hideCompleted
-        ? translations.filter(translation => !isTranslationComplete(translation))
-        : translations;
+    // Filter translations based on filterMode
+    const filteredTranslations = (() => {
+        switch (filterMode) {
+            case 'completed':
+                return translations.filter(t => isTranslationComplete(t));
+            case 'incomplete':
+                return translations.filter(t => !isTranslationComplete(t));
+            case 'new':
+                return translations.filter(t => changedKeys.has(t.key));
+            default:
+                return translations;
+        }
+    })();
 
     const groupTranslationsBySection = () => {
         const groups: Record<string, FlattenedTranslation[]> = {};
@@ -337,16 +348,29 @@ export function TranslationTable({
                 />
             )}
 
-            {/* Show message when all translations are complete and hide completed is on */}
-            {hideCompleted && Object.keys(groupedTranslations).length === 0 && (
+            {/* Show message when filter produces no results */}
+            {filterMode !== 'all' && Object.keys(groupedTranslations).length === 0 && (
                 <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-8 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                         <Check className="h-12 w-12 text-green-400 p-2 bg-green-400/20 rounded-full"/>
-                        <h3 className="text-xl font-semibold text-green-300">All translations are complete!</h3>
-                        <p className="text-gray-400 max-w-md">
-                            There are no incomplete translations to display. You can turn off the "Hide Completed"
-                            toggle to view all translations.
-                        </p>
+                        {filterMode === 'incomplete' && (
+                            <>
+                                <h3 className="text-xl font-semibold text-green-300">All translations are complete!</h3>
+                                <p className="text-gray-400 max-w-md">There are no incomplete translations to display.</p>
+                            </>
+                        )}
+                        {filterMode === 'completed' && (
+                            <>
+                                <h3 className="text-xl font-semibold text-green-300">No completed translations yet.</h3>
+                                <p className="text-gray-400 max-w-md">Fill in translations to see them here.</p>
+                            </>
+                        )}
+                        {filterMode === 'new' && (
+                            <>
+                                <h3 className="text-xl font-semibold text-green-300">No new translations yet.</h3>
+                                <p className="text-gray-400 max-w-md">Translations you add or modify will appear here.</p>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
